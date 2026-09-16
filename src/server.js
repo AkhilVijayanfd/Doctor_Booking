@@ -1,6 +1,6 @@
-const app = require("./app");
-const sequelize = require("./config/database");
-const env = require("./config/env");
+import app from "./app.js";
+import sequelize from "./config/database.js";
+import env from "./config/env.js";
 
 const startServer = async () => {
   try {
