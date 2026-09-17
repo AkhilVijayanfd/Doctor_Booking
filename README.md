@@ -23,3 +23,9 @@ Successfully verified local server and database connectivity.
 - Added doctor breaks, leave, and other unavailable periods.
 - Added overlap validation and clinic timezone-aware UTC conversion.
 - Added Admin authorization and request validation for scheduling configuration.
+
+## Phase 6 – Slot Generation & Appointment Booking
+
+- Added timezone-aware doctor slot lookup and appointment booking APIs.
+- Appointments are validated against recurring availability, unavailability, and existing bookings.
+- Booking uses database transactions and the existing unique doctor-slot constraint.
