@@ -5,6 +5,11 @@ const env = {
 
   port: Number(process.env.PORT) || 5000,
 
+  frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+
   database: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT) || 5432,

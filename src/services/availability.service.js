@@ -37,7 +37,13 @@ const createAvailability = async (doctorId, payload) => {
   await findDoctor(doctorId, true);
   validateAvailability(payload);
   await checkAvailabilityOverlap({ doctorId, ...payload });
-  return serializeAvailability(await DoctorAvailability.create({ doctorId, ...payload }));
+  return serializeAvailability(await DoctorAvailability.create({
+    doctorId,
+    dayOfWeek: payload.dayOfWeek,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    slotDurationMinutes: payload.slotDurationMinutes,
+  }));
 };
 
 const listAvailability = async (doctorId) => {
