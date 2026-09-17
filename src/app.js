@@ -6,6 +6,8 @@ import authRoutes from "./routes/auth.routes.js";
 import adminClinicRoutes from "./routes/clinic.routes.js";
 import { adminRouter as adminDoctorRoutes, publicRouter as doctorRoutes } from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
+import slotRoutes from "./routes/slot.routes.js";
+import appointmentRoutes from "./routes/appointment.routes.js";
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use("/api/admin", adminClinicRoutes);
 app.use("/api/admin", adminDoctorRoutes);
 app.use("/api/admin", availabilityRoutes);
 app.use("/api", doctorRoutes);
+app.use("/api", slotRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
