@@ -17,6 +17,7 @@ let sequelize;
 let clinicId;
 let createdClinic;
 let doctorId;
+let secondDoctorId;
 let userId;
 let otherUserId;
 let userToken;
@@ -26,6 +27,7 @@ let date;
 let localStart;
 let firstThursday;
 let secondThursday;
+let laterDate;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = jwtSecret;
@@ -39,12 +41,15 @@ beforeAll(async () => {
   createdClinic = !existingClinic;
   const now = DateTime.now().setZone(clinic.timezone);
   date = now.plus({ days: ((8 - now.weekday) % 7) || 7 }).toISODate();
+  laterDate = DateTime.fromISO(date, { zone: clinic.timezone }).plus({ days: 7 }).toISODate();
   localStart = `${date}T09:00:00`;
   firstThursday = now.plus({ days: ((4 - now.weekday + 7) % 7) || 7 }).toISODate();
   secondThursday = DateTime.fromISO(firstThursday, { zone: clinic.timezone }).plus({ days: 7 }).toISODate();
 
   const doctor = await Doctor.create({ name: "Dr. Slots", specialization: "Cardiology", email: `slots-${randomUUID()}@example.com` });
   doctorId = doctor.id;
+  const secondDoctor = await Doctor.create({ name: "Dr. Slots Two", specialization: "Cardiology", email: `slots-two-${randomUUID()}@example.com` });
+  secondDoctorId = secondDoctor.id;
   const passwordHash = await bcrypt.hash("Password@123", 10);
   const user = await User.create({ name: "Slot User", email: `slot-user-${randomUUID()}@example.com`, passwordHash, role: "USER" });
   const otherUser = await User.create({ name: "Other Slot User", email: `slot-other-${randomUUID()}@example.com`, passwordHash, role: "USER" });
@@ -55,6 +60,7 @@ beforeAll(async () => {
   adminToken = jwt.sign({ role: "ADMIN" }, jwtSecret, { subject: randomUUID(), expiresIn: "1h" });
 
   await DoctorAvailability.create({ doctorId, dayOfWeek: 1, startTime: "09:00", endTime: "11:00", slotDurationMinutes: 30 });
+  await DoctorAvailability.create({ doctorId: secondDoctorId, dayOfWeek: 1, startTime: "09:00", endTime: "11:00", slotDurationMinutes: 30 });
   await DoctorAvailability.create({ doctorId, dayOfWeek: 4, startTime: "09:00", endTime: "10:00", slotDurationMinutes: 30 });
   const localBreakStart = DateTime.fromISO(`${date}T09:30:00`, { zone: clinic.timezone }).toUTC().toJSDate();
   const localBreakEnd = DateTime.fromISO(`${date}T10:30:00`, { zone: clinic.timezone }).toUTC().toJSDate();
@@ -65,11 +71,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (doctorId) {
-    await Appointment.destroy({ where: { doctorId } });
-    await DoctorAvailability.destroy({ where: { doctorId } });
-    await DoctorUnavailability.destroy({ where: { doctorId } });
-    await Doctor.destroy({ where: { id: doctorId } });
+  if (doctorId || secondDoctorId) {
+    const doctorIds = [doctorId, secondDoctorId].filter(Boolean);
+    await Appointment.destroy({ where: { doctorId: doctorIds } });
+    await DoctorAvailability.destroy({ where: { doctorId: doctorIds } });
+    await DoctorUnavailability.destroy({ where: { doctorId: doctorIds } });
+    await Doctor.destroy({ where: { id: doctorIds } });
   }
   if (userId || otherUserId) await User.destroy({ where: { id: [userId, otherUserId].filter(Boolean) } });
   if (createdClinic && clinicId) await Clinic.destroy({ where: { id: clinicId } });
@@ -123,7 +130,7 @@ describe("slot generation and appointment booking", () => {
     await Doctor.update({ isActive: true }, { where: { id: doctorId } });
   });
 
-  test("books only an exact available slot and hides it afterwards", async () => {
+  test("books only an exact available slot, rejects a concurrent duplicate, and hides it afterwards", async () => {
     const noToken = await request(app).post("/api/appointments").send({ doctorId, startAt: localStart });
     const admin = await request(app).post("/api/appointments").set("Authorization", `Bearer ${adminToken}`).send({ doctorId, startAt: localStart });
     const arbitrary = await request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId, startAt: `${date}T09:15:00` });
@@ -131,13 +138,27 @@ describe("slot generation and appointment booking", () => {
     expect(admin.status).toBe(403);
     expect(arbitrary.status).toBe(409);
 
-    const booked = await request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId, startAt: localStart });
-    expect(booked.status).toBe(201);
+    const [firstAttempt, secondAttempt] = await Promise.all([
+      request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId, startAt: localStart }),
+      request(app).post("/api/appointments").set("Authorization", `Bearer ${otherUserToken}`).send({ doctorId, startAt: localStart }),
+    ]);
+    expect([firstAttempt.status, secondAttempt.status].sort()).toEqual([201, 409]);
+    const booked = firstAttempt.status === 201 ? firstAttempt : secondAttempt;
     expect(booked.body.data).toEqual(expect.objectContaining({ status: "BOOKED", doctor: expect.objectContaining({ id: doctorId }) }));
     const appointmentId = booked.body.data.id;
 
+    const clinic = await Clinic.findByPk(clinicId);
+    const storedStartAt = DateTime.fromISO(localStart, { zone: clinic.timezone }).toUTC().toJSDate();
+    expect(await Appointment.count({ where: { doctorId, startAt: storedStartAt } })).toBe(1);
+
     const duplicate = await request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId, startAt: localStart });
     expect(duplicate.status).toBe(409);
+
+    const otherDoctorBooking = await request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId: secondDoctorId, startAt: localStart });
+    const laterDateBooking = await request(app).post("/api/appointments").set("Authorization", `Bearer ${userToken}`).send({ doctorId, startAt: `${laterDate}T09:00:00` });
+    expect(otherDoctorBooking.status).toBe(201);
+    expect(laterDateBooking.status).toBe(201);
+
     const slots = await request(app).get(`/api/doctors/${doctorId}/slots`).query({ date });
     expect(slots.body.data.slots).toHaveLength(0);
 
