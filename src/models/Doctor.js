@@ -8,9 +8,9 @@ const Doctor = sequelize.define(
     name: { type: DataTypes.STRING(120), allowNull: false, validate: { notEmpty: true, len: [1, 120] } },
     specialization: { type: DataTypes.STRING(120), allowNull: false, validate: { notEmpty: true, len: [1, 120] } },
     email: {
-      type: DataTypes.STRING(254), allowNull: true,
+      type: DataTypes.STRING(254), allowNull: false, unique: true,
       validate: { isEmail: true },
-      set(value) { this.setDataValue("email", value?.trim().toLowerCase() || null); },
+      set(value) { this.setDataValue("email", value?.trim().toLowerCase()); },
     },
     phone: { type: DataTypes.STRING(30), allowNull: true },
     isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: "is_active" },
