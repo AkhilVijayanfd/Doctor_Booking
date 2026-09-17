@@ -16,3 +16,10 @@ Successfully verified local server and database connectivity.
 - Added Admin doctor management and active/inactive status updates.
 - Added role-protected management APIs and active doctor listing.
 - Added request validation and centralized error handling coverage.
+
+## Phase 5 – Doctor Availability & Unavailability Completed
+
+- Added recurring weekly doctor availability and slot-duration configuration.
+- Added doctor breaks, leave, and other unavailable periods.
+- Added overlap validation and clinic timezone-aware UTC conversion.
+- Added Admin authorization and request validation for scheduling configuration.
