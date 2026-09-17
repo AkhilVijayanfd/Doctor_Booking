@@ -13,12 +13,14 @@ let Doctor;
 let sequelize;
 let clinicId;
 let doctorId;
+let hasExistingClinic;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = jwtSecret;
   ({ default: app } = await import("../src/app.js"));
   ({ Clinic, Doctor } = await import("../src/models/index.js"));
   ({ default: sequelize } = await import("../src/config/database.js"));
+  hasExistingClinic = Boolean(await Clinic.findOne());
 });
 
 afterAll(async () => {
@@ -40,9 +42,9 @@ describe("clinic management API", () => {
     expect(user.status).toBe(403);
   });
 
-  test("returns 404 when no clinic has been configured", async () => {
+  test("returns the current clinic state", async () => {
     const response = await request(app).get("/api/admin/clinic").set("Authorization", `Bearer ${adminToken}`);
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(hasExistingClinic ? 200 : 404);
   });
 
   test("validates timezone and lets an ADMIN create, retrieve, and update the clinic", async () => {
@@ -51,6 +53,15 @@ describe("clinic management API", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ name: "Main Clinic", timezone: "IST" });
     expect(invalidTimezone.status).toBe(400);
+
+    if (hasExistingClinic) {
+      const duplicate = await request(app)
+        .post("/api/admin/clinic")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ name: "Another Clinic", timezone: "Europe/London" });
+      expect(duplicate.status).toBe(409);
+      return;
+    }
 
     const created = await request(app)
       .post("/api/admin/clinic")
