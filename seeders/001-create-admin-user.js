@@ -18,8 +18,12 @@ module.exports = {
       return;
     }
 
+    if (!process.env.ADMIN_PASSWORD) {
+      throw new Error("ADMIN_PASSWORD must be set before running the admin seeder");
+    }
+
     const now = new Date();
-    const passwordHash = await bcrypt.hash("Admin@12345", BCRYPT_SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, BCRYPT_SALT_ROUNDS);
 
     await queryInterface.bulkInsert("users", [{
       id: randomUUID(),

@@ -130,7 +130,9 @@ npx sequelize-cli db:seed:all --config config/config.js --seeders-path seeders
 The seeded admin user is:
 
 - Email: admin@example.com
-- Password: Admin@12345
+- Password: the value of `ADMIN_PASSWORD` supplied when running the seeder
+
+For local or deployment seeding, set `ADMIN_PASSWORD` in the environment before running the seeder. The seeder does not contain a default password.
 
 ## Migration and Seeder Commands
 
@@ -144,6 +146,30 @@ npx sequelize-cli db:migrate:undo --config config/config.js --migrations-path mi
 npx sequelize-cli db:seed:all --config config/config.js --seeders-path seeders
 npx sequelize-cli db:seed:undo:all --config config/config.js --seeders-path seeders
 ```
+
+## Render Deployment
+
+Configure the service with:
+
+- Build command: `npm install`
+- Start command: `npm start`
+- Health check path: `/api/health`
+
+Set `NODE_ENV=production`, `PORT` if required by the platform, `API_BASE_URL` to the public API URL, `FRONTEND_ORIGINS` to the deployed frontend origin, all `DB_*` variables for the production PostgreSQL database, and a strong `JWT_SECRET`.
+
+Run migrations before starting the service:
+
+```bash
+npx sequelize-cli db:migrate --config config/config.js --migrations-path migrations
+```
+
+If an initial admin is required, set `ADMIN_PASSWORD` securely for the migration command environment and run:
+
+```bash
+npx sequelize-cli db:seed:all --config config/config.js --seeders-path seeders
+```
+
+The server listens on `0.0.0.0` using `PORT`, which defaults to `5000` when omitted. Swagger is available at `/api-docs` and uses `API_BASE_URL` for its server URL, falling back to the local port when that variable is omitted.
 
 ## Run and Test Commands
 

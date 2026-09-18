@@ -5,6 +5,8 @@ const env = {
 
   port: Number(process.env.PORT) || 5000,
 
+  apiBaseUrl: process.env.API_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
+
   frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:3000")
     .split(",")
     .map((origin) => origin.trim())
