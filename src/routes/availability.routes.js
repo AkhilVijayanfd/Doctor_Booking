@@ -22,19 +22,20 @@ import {
   updateAvailabilityValidator,
   updateUnavailabilityValidator,
 } from "../validators/availability.validator.js";
+import { sensitiveMutationRateLimiter } from "../middleware/rate-limit.middleware.js";
 
 const router = Router();
 
 router.use(authenticate, authorizeRoles("ADMIN"));
 
-router.post("/doctors/:doctorId/availability", createAvailabilityValidator, validateRequest, createRecurringAvailability);
+router.post("/doctors/:doctorId/availability", sensitiveMutationRateLimiter, createAvailabilityValidator, validateRequest, createRecurringAvailability);
 router.get("/doctors/:doctorId/availability", availabilityParamsValidator, validateRequest, getRecurringAvailability);
-router.put("/doctors/:doctorId/availability/:availabilityId", updateAvailabilityValidator, validateRequest, updateRecurringAvailability);
-router.delete("/doctors/:doctorId/availability/:availabilityId", availabilityRecordParamsValidator, validateRequest, removeRecurringAvailability);
+router.put("/doctors/:doctorId/availability/:availabilityId", sensitiveMutationRateLimiter, updateAvailabilityValidator, validateRequest, updateRecurringAvailability);
+router.delete("/doctors/:doctorId/availability/:availabilityId", sensitiveMutationRateLimiter, availabilityRecordParamsValidator, validateRequest, removeRecurringAvailability);
 
-router.post("/doctors/:doctorId/unavailability", createUnavailabilityValidator, validateRequest, createDoctorUnavailability);
+router.post("/doctors/:doctorId/unavailability", sensitiveMutationRateLimiter, createUnavailabilityValidator, validateRequest, createDoctorUnavailability);
 router.get("/doctors/:doctorId/unavailability", unavailabilityParamsValidator, validateRequest, getDoctorUnavailability);
-router.put("/doctors/:doctorId/unavailability/:unavailabilityId", updateUnavailabilityValidator, validateRequest, updateDoctorUnavailability);
-router.delete("/doctors/:doctorId/unavailability/:unavailabilityId", unavailabilityRecordParamsValidator, validateRequest, removeDoctorUnavailability);
+router.put("/doctors/:doctorId/unavailability/:unavailabilityId", sensitiveMutationRateLimiter, updateUnavailabilityValidator, validateRequest, updateDoctorUnavailability);
+router.delete("/doctors/:doctorId/unavailability/:unavailabilityId", sensitiveMutationRateLimiter, unavailabilityRecordParamsValidator, validateRequest, removeDoctorUnavailability);
 
 export default router;
