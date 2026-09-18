@@ -1,3 +1,5 @@
+import env from "./env.js";
+
 const errorResponses = {
   BadRequest: {
     description: "Validation failed",
@@ -77,7 +79,7 @@ const swaggerSpec = {
     version: "1.0.0",
     description: "REST API for clinic configuration, doctor scheduling, available slots, and user appointments.",
   },
-  servers: [{ url: "http://localhost:5000", description: "Local development server" }],
+  servers: [{ url: env.apiBaseUrl, description: "Configured API server" }],
   tags: [
     { name: "Health" },
     { name: "Auth" },
